@@ -3,6 +3,7 @@
 import socket, sys
 from struct import *
 
+
 def makeCheckSum(msg):
 	s = 0
 	for i in range(0, len(msg), 2):
@@ -28,7 +29,7 @@ def makeIpHeader(sourceIP, destIP):
 
 	return pack('!BBHHHBBH4s4s', ihlVersion, typeOfService, totalLength,
 				id, flagsOffset, ttl, protocol, headerChecksum,
-				sourceAddress, destAddresse)
+				sourceAddress, destAddress)
 
 def makeTcpHeader(port, icheckSum="none"):
 	sourcePort = port
@@ -37,10 +38,142 @@ def makeTcpHeader(port, icheckSum="none"):
 	ackNum = 0
 	dataOffset = 5
 	flagFin = 0
-	flagSyn = 0
+	flagSyn = 1
 	flagRst = 0
 	flagPsh = 0
 	flagAck = 0
 	flagUrg = 0
 
-	window = socket.htons  
+	window = socket.htons(5840)
+
+	if(icheckSum == "none"):
+		checkSum = 0
+	else:
+		checkSum = icheckSum
+
+	urgentPointer = 0
+	dataOffsetResv = (dataOffset << 4) + 0
+	flags = (flagUrg << 5) + (flagAck << 4) + (flagPsh << 3) + (flagRst << 2) + (flagSyn << 1) + flagFin
+
+	return pack('!HHLLBBHHH', int(sourcePort), int(destAddrPort), 
+		seqNum, ackNum, dataOffsetResv, flags, window, 
+		checkSum, urgentPointer)
+
+
+
+def usage(argv):
+	print()
+	print("Covert TCP Usage")
+	print("[Sender]\n")
+	print("run: python " + sys.argv[0] + " -source source_ip -dest dest_ip " + 
+	"-source_port sport -dest_port dport -server -file filename \n")
+	print("source_ip  	- Host where you want the data to originate from.");
+	print("		In SERVER mode this is the host data will");
+	print("		be coming FROM.");
+	print("dest_ip		- Host to send data to")
+	print("sport  		- IP source port you want data to appear from.");
+	print("		(randomly set by default)");
+	print("dport 		- IP source port you want data to go to. In");
+	print("		SERVER mode this is the port data will be coming");
+	print("		inbound on. Port 80 by default.");
+	print("filename 	- Name of the file to encode and transfer.");
+	print("-server  	- Passive mode to allow receiving of data.");
+	print()
+	print("Example: Server - receiver")
+	print("python " + sys.argv[0] + " -source 192.168.0.1 -dest 192.168.0.2 -dest_port 80 -server -file receive.txt")
+	print()
+	print("Example: Client - sender")
+	print("python " + sys.argv[0] + " -source 192.168.0.1 -dest 192.168.0.2 -source_port 8000 -dest_port 80 -file send.txt")
+
+	# print (sip)
+	# print (dip)
+	# print (sport)
+	# print (dport)
+	# print ("file name: " + filename)
+	exit(1)
+
+def start_server():
+
+	return 0
+
+def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
+	# open a file
+
+	# create a raw socket
+	s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+	s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+
+	# make ip header
+	ipHeader = makeIpHeader(source_ip, dest_ip)
+	# make tcp header
+	tcpHeader = makeTcpHeader(source_port)
+
+	# change network address format from ascii to network address
+	sourceAddress = socket.inet_aton(source_ip)
+	destAddress = socket.inet_aton(dest_ip)
+
+	placeholder = 0
+	protocol = socket.IPPROTO_TCP
+	tcpLen = len(tcpHeader)
+	psh = pack('!4s4sBBH', sourceAddress, destAddress, placeholder, protocol, tcpLen)
+	psh = psh + tcpHeader
+	tcpChecksum = makeCheckSum(psh)
+
+	tcpHeader = makeTcpHeader(source_port, tcpChecksum)
+
+	packet = ipHeader + tcpHeader
+	s.sendto(packet, (dest_ip), 0)
+
+	return 0
+
+def main(argv):
+
+	# validation argv
+	if (len(argv) < 6) or (len(argv) > 13):
+		usage(argv)
+
+	# assign values to each valuable
+	if "-source" in argv:
+		i = argv.index("-source")
+		sip = argv[i+1]
+
+	if "-dest" in argv:
+		i = argv.index("-dest")
+		dip = argv[i+1]
+
+	if "-source_port" in argv:
+		i = argv.index("-source_port")
+		sport = argv[i+1]
+
+	if "-dest_port" in argv:
+		i = argv.index("-dest_port")
+		dport = argv[i+1]
+
+	if "-file" in argv:
+		i = argv.index("-file")
+		filename = argv[i+1]
+
+	# print (sip, dip, sport, dport, filename)
+
+	# check if it is client mode or server mode
+	if "-server" in argv:
+		print("Server mode")
+		start_server()
+	else:
+		print("Client mode")
+		start_client(sip, dip, sport, dport, filename)
+
+
+if __name__ == '__main__':
+	main(sys.argv[1:])	# get everything after the script name
+
+
+
+
+
+
+
+
+
+
+
