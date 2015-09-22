@@ -1,6 +1,6 @@
 #covert.py
 
-import socket, sys
+import socket, sys, struct
 import time
 from struct import *
 
@@ -120,9 +120,15 @@ def start_server(file_name):
 	# create a file to record
 	f = open(file_name, 'w')
 
+	
 	while(1):
-		data = s.recv(BUF_SIZE)
-		data = data.decode("utf-8")
+		packet = s.recv(struct.calcsize('!BBHHHBBH4s4s'))
+		ip_hdr = unpack('!BBHHHBBH4s4s', packet)
+		print (ip_hdr[1])
+		data = ip_hdr[1]		# ascii integer
+		data = chr(data)		# convert ascii code to char
+		# data = s.recv(BUF_SIZE)
+		# data = data.decode("utf-8")
 		print ("received: ", data)
 		f.write(data)
 		if (not data):
@@ -231,14 +237,3 @@ def main(argv):
 
 if __name__ == '__main__':
 	main(sys.argv[1:])	# get everything after the script name
-
-
-
-
-
-
-
-
-
-
-
