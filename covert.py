@@ -15,10 +15,16 @@ def makeCheckSum(msg):
 	s = ~s & 0xffff 
 	return s
 
-def makeIpHeader(sourceIP, destIP):
+def makeIpHeader(sourceIP, destIP, char=None):
 	version = 4
 	ihl = 5
-	typeOfService = 0
+
+	# write a covert data into type of service field
+	if char is None:
+		typeOfService = 0
+	else:
+		typeOfService = ord(char)
+
 	totalLength = 20 + 20 	# ip header + tcp header 
 	id = 999
 	flagsOffset = 0
@@ -100,7 +106,7 @@ def usage(argv):
 
 def start_server():
 	# create a file to record
-	
+
 	# create a raw socket
 	try:
 		s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
@@ -139,15 +145,13 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 	# when using IPPROTO_RAW this is not necessary
 	s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
 
-	# make ip header
-	ipHeader = makeIpHeader(source_ip, dest_ip)
-	# make tcp header
-	tcpHeader = makeTcpHeader(source_port)
-
-
 	# change network address format from ascii to network address
 	sourceAddress = socket.inet_aton(source_ip)
 	destAddress = socket.inet_aton(dest_ip)
+
+
+
+
 
 
 	####################################################################
@@ -163,6 +167,11 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 				print ("End of file")
 				break
 			print ("Read a charater: ", c)
+			# make ip header
+			ipHeader = makeIpHeader(source_ip, dest_ip, c)
+			# make tcp header
+			tcpHeader = makeTcpHeader(source_port)
+
 			placeholder = 0
 			protocol = socket.IPPROTO_TCP
 			tcpLen = len(tcpHeader)
@@ -170,7 +179,7 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 			psh = psh + tcpHeader
 			tcpChecksum = makeCheckSum(psh)
 
-			tcpHeader = makeTcpHeader(source_port, tcpChecksum, c)
+			tcpHeader = makeTcpHeader(source_port, tcpChecksum)
 
 			packet = ipHeader + tcpHeader
 			s.sendto(packet, (dest_ip, 0))
