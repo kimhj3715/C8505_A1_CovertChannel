@@ -104,8 +104,7 @@ def usage(argv):
 	# print ("file name: " + filename)
 	exit(1)
 
-def start_server():
-	# create a file to record
+def start_server(file_name):
 
 	# create a raw socket
 	try:
@@ -117,9 +116,15 @@ def start_server():
 	# when using IPPROTO_RAW this is not necessary
 	s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
 
+
+	# create a file to record
+	f = open(file_name, 'w')
+
 	while(1):
 		data = s.recv(BUF_SIZE)
-		print (" received: ", data)
+		data = data.decode("utf-8")
+		print ("received: ", data)
+		f.write(data)
 		if (not data):
 			print ("Disconnected")
 			break
@@ -128,7 +133,7 @@ def start_server():
 	s.close()
 
 	# close file description
-
+	f.close()
 
 	return 0
 
@@ -137,21 +142,17 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 
 	# create a raw socket
 	try:
-		s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+		s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
 	except OSError as msg:
 		print ('Socket could not be created. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
 		sys.exit()
 	# tell kernel not to put in headers, since we are providing it, 
 	# when using IPPROTO_RAW this is not necessary
-	s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+	# s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
 
 	# change network address format from ascii to network address
 	sourceAddress = socket.inet_aton(source_ip)
 	destAddress = socket.inet_aton(dest_ip)
-
-
-
-
 
 
 	####################################################################
@@ -184,8 +185,9 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 			packet = ipHeader + tcpHeader
 			s.sendto(packet, (dest_ip, 0))
 
+	s.close()
 
-
+	f.close()
 
 	return 0
 
@@ -221,7 +223,7 @@ def main(argv):
 	# check if it is client mode or server mode
 	if "-server" in argv:
 		print("Server mode")
-		start_server()
+		start_server(filename)
 	else:
 		print("Client mode")
 		start_client(sip, dip, sport, dport, filename)
