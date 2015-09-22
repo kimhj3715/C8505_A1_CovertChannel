@@ -3,6 +3,7 @@
 import socket, sys
 from struct import *
 
+BUF_SIZE = 1
 
 def makeCheckSum(msg):
 	s = 0
@@ -44,7 +45,7 @@ def makeTcpHeader(port, icheckSum="none"):
 	flagAck = 0
 	flagUrg = 0
 
-	window = socket.htons(5840)
+	window = socket.htons(5840)		# maximum allowed window size
 
 	if(icheckSum == "none"):
 		checkSum = 0
@@ -93,6 +94,30 @@ def usage(argv):
 	exit(1)
 
 def start_server():
+	# create a file to record
+
+	# create a raw socket
+	try:
+		s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+	except OSError as msg:
+		print ('Socket could not be created. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
+		sys.exit()
+	# tell kernel not to put in headers, since we are providing it, 
+	# when using IPPROTO_RAW this is not necessary
+	s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+
+	while(1):
+		data = s.recv(BUF_SIZE)
+		print ("received: ", data)
+		if (not data):
+			print ("Disconnected")
+			break
+
+	# close the socket
+	s.close()
+	
+	# close file description
+
 
 	return 0
 
@@ -100,13 +125,24 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 	# open a file
 
 	# create a raw socket
-	s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+	try:
+		s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+	except OSError as msg:
+		print ('Socket could not be created. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
+		sys.exit()
+	# tell kernel not to put in headers, since we are providing it, 
+	# when using IPPROTO_RAW this is not necessary
 	s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
 
 	# make ip header
 	ipHeader = makeIpHeader(source_ip, dest_ip)
 	# make tcp header
 	tcpHeader = makeTcpHeader(source_port)
+
+
+	####################################################################
+	# Put data in here
+	####################################################################
 
 	# change network address format from ascii to network address
 	sourceAddress = socket.inet_aton(source_ip)
