@@ -1,6 +1,7 @@
 #covert.py
 
 import socket, sys
+import time
 from struct import *
 
 BUF_SIZE = 1
@@ -32,7 +33,7 @@ def makeIpHeader(sourceIP, destIP):
 				id, flagsOffset, ttl, protocol, headerChecksum,
 				sourceAddress, destAddress)
 
-def makeTcpHeader(port, icheckSum="none"):
+def makeTcpHeader(port, icheckSum=None, char=None):
 	sourcePort = port
 	destAddrPort = 80 		### just set to http server
 	seqNum = 0
@@ -45,9 +46,13 @@ def makeTcpHeader(port, icheckSum="none"):
 	flagAck = 0
 	flagUrg = 0
 
-	window = socket.htons(5840)		# maximum allowed window size
+	if char is None:
+		window = socket.htons(5840)		# maximum allowed window size
+	else:
+		print (char)
+		window = socket.htons(ord(char))
 
-	if(icheckSum == "none"):
+	if(icheckSum is None):
 		checkSum = 0
 	else:
 		checkSum = icheckSum
@@ -95,7 +100,7 @@ def usage(argv):
 
 def start_server():
 	# create a file to record
-
+	
 	# create a raw socket
 	try:
 		s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
@@ -108,21 +113,21 @@ def start_server():
 
 	while(1):
 		data = s.recv(BUF_SIZE)
-		print ("received: ", data)
+		print (" received: ", data)
 		if (not data):
 			print ("Disconnected")
 			break
 
 	# close the socket
 	s.close()
-	
+
 	# close file description
 
 
 	return 0
 
 def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
-	# open a file
+	
 
 	# create a raw socket
 	try:
@@ -140,25 +145,38 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 	tcpHeader = makeTcpHeader(source_port)
 
 
-	####################################################################
-	# Put data in here
-	####################################################################
-
 	# change network address format from ascii to network address
 	sourceAddress = socket.inet_aton(source_ip)
 	destAddress = socket.inet_aton(dest_ip)
 
-	placeholder = 0
-	protocol = socket.IPPROTO_TCP
-	tcpLen = len(tcpHeader)
-	psh = pack('!4s4sBBH', sourceAddress, destAddress, placeholder, protocol, tcpLen)
-	psh = psh + tcpHeader
-	tcpChecksum = makeCheckSum(psh)
 
-	tcpHeader = makeTcpHeader(source_port, tcpChecksum)
+	####################################################################
+	# Put data in here
+	####################################################################
 
-	packet = ipHeader + tcpHeader
-	s.sendto(packet, (dest_ip, 0))
+	# open a file
+	with open(file_name) as f:
+		while(1):
+			time.sleep(1)
+			c = f.read(1)
+			if not c:
+				print ("End of file")
+				break
+			print ("Read a charater: ", c)
+			placeholder = 0
+			protocol = socket.IPPROTO_TCP
+			tcpLen = len(tcpHeader)
+			psh = pack('!4s4sBBH', sourceAddress, destAddress, placeholder, protocol, tcpLen)
+			psh = psh + tcpHeader
+			tcpChecksum = makeCheckSum(psh)
+
+			tcpHeader = makeTcpHeader(source_port, tcpChecksum, c)
+
+			packet = ipHeader + tcpHeader
+			s.sendto(packet, (dest_ip, 0))
+
+
+
 
 	return 0
 
