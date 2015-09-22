@@ -7,7 +7,7 @@ from struct import *
 def makeCheckSum(msg):
 	s = 0
 	for i in range(0, len(msg), 2):
-		w = (ord(msg[i]) << 8) + (ord(msg[i+1]))
+		w = (msg[i] << 8) + (msg[i+1])
 		s = s + w
 	s = (s >> 16) + (s & 0xffff)
 	s = ~s & 0xffff 
@@ -122,7 +122,7 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 	tcpHeader = makeTcpHeader(source_port, tcpChecksum)
 
 	packet = ipHeader + tcpHeader
-	s.sendto(packet, (dest_ip), 0)
+	s.sendto(packet, (dest_ip, 0))
 
 	return 0
 
