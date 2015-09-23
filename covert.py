@@ -115,7 +115,7 @@ def start_server(file_name):
 	# tell kernel not to put in headers, since we are providing it, 
 	# when using IPPROTO_RAW this is not necessary
 	s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-
+	
 
 	# create a file to record
 	f = open(file_name, 'w')
@@ -127,8 +127,7 @@ def start_server(file_name):
 		print (ip_hdr[1])
 		data = ip_hdr[1]		# ascii integer
 		data = chr(data)		# convert ascii code to char
-		# data = s.recv(BUF_SIZE)
-		# data = data.decode("utf-8")
+
 		print ("received: ", data)
 		f.write(data)
 		if (not data):
