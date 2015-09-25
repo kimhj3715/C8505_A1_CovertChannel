@@ -1,4 +1,30 @@
-#covert.py
+######################################################################
+#	covert.py
+#	
+#	This program should be run in Python 3.4 version 
+#	(NOT Python 2.7)
+#
+#	This application is to send contents in a file to remote machine covertly.
+#	The data will be sent through "Type of Service" field in IP header.
+#	The "Type of Service" can contain 1 Byte (8 bits).
+#	The program will send data character by character using ASCII encoding
+#	which is 8 bits per character.
+#
+#	Author: 	Ben Kim
+#
+#	Date: 		Sep 20 2015
+#
+#	Example: Server - receiver
+#	python covert.py -source 192.168.0.1 -dest 192.168.0.2 -dest_port 80 
+#	-server -file receive.txt
+#
+#	Example: Client - sender
+#	python covert.py -source 192.168.0.1 -dest 192.168.0.2 -source_port 8000 
+#	-dest_port 80 -file send.txt
+#
+#
+#######################################################################
+
 
 import socket, sys, struct
 import time
