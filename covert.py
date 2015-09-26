@@ -22,6 +22,11 @@
 #	python covert.py -source 192.168.0.1 -dest 192.168.0.2 -source_port 8000 
 #	-dest_port 80 -file send.txt
 #
+#	
+#	Further improvement :
+#		The firewall of server side or bounce server should be flushed.
+#		# iptables -F
+#		# iptables -X
 #
 #######################################################################
 
@@ -65,9 +70,9 @@ def makeIpHeader(sourceIP, destIP, char=None):
 				id, flagsOffset, ttl, protocol, headerChecksum,
 				sourceAddress, destAddress)
 
-def makeTcpHeader(port, icheckSum=None, char=None):
-	sourcePort = port
-	destAddrPort = 80 		### just set to http server
+def makeTcpHeader(sport, dport, icheckSum=None, char=None):
+	sourcePort = sport
+	destAddrPort = dport 		### just set to http server
 	seqNum = 0
 	ackNum = 0
 	dataOffset = 5
@@ -123,14 +128,9 @@ def usage(argv):
 	print("Example: Client - sender")
 	print("python " + sys.argv[0] + " -source 192.168.0.1 -dest 192.168.0.2 -source_port 8000 -dest_port 80 -file send.txt")
 
-	# print (sip)
-	# print (dip)
-	# print (sport)
-	# print (dport)
-	# print ("file name: " + filename)
 	exit(1)
 
-def start_server(file_name):
+def start_server(source_ip, file_name):
 
 	# create a raw socket
 	try:
@@ -146,19 +146,20 @@ def start_server(file_name):
 	# create a file to record
 	f = open(file_name, 'w')
 
-	
 	while(1):
 		packet = s.recv(struct.calcsize('!BBHHHBBH4s4s'))
 		ip_hdr = unpack('!BBHHHBBH4s4s', packet)
-		print (ip_hdr[1])
-		data = ip_hdr[1]		# ascii integer
-		data = chr(data)		# convert ascii code to char
-
-		print ("received: ", data)
-		f.write(data)
-		if (not data):
-			print ("Disconnected")
-			break
+		# print(socket.inet_ntoa(ip_hdr[8]))
+		# print("source_ip: ", source_ip)
+		# print("ip_hdr[8]: ", ip_hdr[8])
+		if socket.inet_ntoa(ip_hdr[8]) == source_ip:
+			data = ip_hdr[1]		# ascii integer
+			data = chr(data)		# convert ascii code to char
+			print ("received: ", data, "ASCII Value:", ip_hdr[1])
+			f.write(data)
+			if (not data):
+				print ("Disconnected")
+				break
 
 	# close the socket
 	s.close()
@@ -195,6 +196,7 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 		while(1):
 			time.sleep(1)
 			c = f.read(1)
+			print(c)
 			if not c:
 				print ("End of file")
 				break
@@ -202,7 +204,7 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 			# make ip header
 			ipHeader = makeIpHeader(source_ip, dest_ip, c)
 			# make tcp header
-			tcpHeader = makeTcpHeader(source_port)
+			tcpHeader = makeTcpHeader(source_port, dest_port)
 
 			placeholder = 0
 			protocol = socket.IPPROTO_TCP
@@ -211,13 +213,15 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 			psh = psh + tcpHeader
 			tcpChecksum = makeCheckSum(psh)
 
-			tcpHeader = makeTcpHeader(source_port, tcpChecksum)
+			tcpHeader = makeTcpHeader(source_port, dest_port, tcpChecksum)
 
 			packet = ipHeader + tcpHeader
 			s.sendto(packet, (dest_ip, 0))
-
+	
+	# close the socket
 	s.close()
 
+	# close file description
 	f.close()
 
 	return 0
@@ -254,7 +258,7 @@ def main(argv):
 	# check if it is client mode or server mode
 	if "-server" in argv:
 		print("Server mode")
-		start_server(filename)
+		start_server(sip, filename)
 	else:
 		print("Client mode")
 		start_client(sip, dip, sport, dport, filename)
