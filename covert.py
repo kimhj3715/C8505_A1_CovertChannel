@@ -36,7 +36,12 @@ import time
 from struct import *
 
 BUF_SIZE = 1
+id = 999
 
+######################################################
+#	Make checksum to check later
+#
+######################################################
 def makeCheckSum(msg):
 	s = 0
 	for i in range(0, len(msg), 2):
@@ -46,6 +51,10 @@ def makeCheckSum(msg):
 	s = ~s & 0xffff 
 	return s
 
+######################################################
+#	Make IP Header
+#
+######################################################
 def makeIpHeader(sourceIP, destIP, char=None):
 	version = 4
 	ihl = 5
@@ -57,7 +66,8 @@ def makeIpHeader(sourceIP, destIP, char=None):
 		typeOfService = ord(char)
 
 	totalLength = 20 + 20 	# ip header + tcp header 
-	id = 999
+	id = id + 1
+	print(id)
 	flagsOffset = 0
 	ttl = 255
 	protocol = socket.IPPROTO_TCP
@@ -70,6 +80,10 @@ def makeIpHeader(sourceIP, destIP, char=None):
 				id, flagsOffset, ttl, protocol, headerChecksum,
 				sourceAddress, destAddress)
 
+######################################################
+#	Make TCP Header
+#
+######################################################
 def makeTcpHeader(sport, dport, icheckSum=None, char=None):
 	sourcePort = sport
 	destAddrPort = dport 		### just set to http server
@@ -103,33 +117,10 @@ def makeTcpHeader(sport, dport, icheckSum=None, char=None):
 		checkSum, urgentPointer)
 
 
-
-def usage(argv):
-	print()
-	print("Covert TCP Usage")
-	print("[Sender]\n")
-	print("run: python " + sys.argv[0] + " -source source_ip -dest dest_ip " + 
-	"-source_port sport -dest_port dport -server -file filename \n")
-	print("source_ip  	- Host where you want the data to originate from.");
-	print("		In SERVER mode this is the host data will");
-	print("		be coming FROM.");
-	print("dest_ip		- Host to send data to")
-	print("sport  		- IP source port you want data to appear from.");
-	print("		(randomly set by default)");
-	print("dport 		- IP source port you want data to go to. In");
-	print("		SERVER mode this is the port data will be coming");
-	print("		inbound on. Port 80 by default.");
-	print("filename 	- Name of the file to encode and transfer.");
-	print("-server  	- Passive mode to allow receiving of data.");
-	print()
-	print("Example: Server - receiver")
-	print("python " + sys.argv[0] + " -source 192.168.0.1 -dest 192.168.0.2 -dest_port 80 -server -file receive.txt")
-	print()
-	print("Example: Client - sender")
-	print("python " + sys.argv[0] + " -source 192.168.0.1 -dest 192.168.0.2 -source_port 8000 -dest_port 80 -file send.txt")
-
-	exit(1)
-
+######################################################
+#	Start server side
+#
+######################################################
 def start_server(source_ip, file_name):
 
 	# create a raw socket
@@ -149,13 +140,12 @@ def start_server(source_ip, file_name):
 	while(1):
 		packet = s.recv(struct.calcsize('!BBHHHBBH4s4s'))
 		ip_hdr = unpack('!BBHHHBBH4s4s', packet)
-		# print(socket.inet_ntoa(ip_hdr[8]))
-		# print("source_ip: ", source_ip)
-		# print("ip_hdr[8]: ", ip_hdr[8])
+
+		# check if the source ip address are same
 		if socket.inet_ntoa(ip_hdr[8]) == source_ip:
 			data = ip_hdr[1]		# ascii integer
 			data = chr(data)		# convert ascii code to char
-			print ("received: ", data, "ASCII Value:", ip_hdr[1])
+			print ("received: ", data, "	ASCII Value:", ip_hdr[1])
 			f.write(data)
 			if (not data):
 				print ("Disconnected")
@@ -169,6 +159,10 @@ def start_server(source_ip, file_name):
 
 	return 0
 
+######################################################
+#	Start client side
+#
+######################################################
 def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 	
 
@@ -186,10 +180,6 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 	sourceAddress = socket.inet_aton(source_ip)
 	destAddress = socket.inet_aton(dest_ip)
 
-
-	####################################################################
-	# Put data in here
-	####################################################################
 
 	# open a file
 	with open(file_name) as f:
@@ -226,6 +216,10 @@ def start_client(source_ip, dest_ip, source_port, dest_port, file_name):
 
 	return 0
 
+######################################################
+#	main function that validates user input
+#	after validation, start client or server
+######################################################
 def main(argv):
 
 	# validation argv
@@ -263,6 +257,41 @@ def main(argv):
 		print("Client mode")
 		start_client(sip, dip, sport, dport, filename)
 
+	exit(0)
 
+######################################################
+#	Print usage when a user put wrong input
+#
+######################################################
+def usage(argv):
+	print()
+	print("Covert TCP Usage")
+	print("[Sender]\n")
+	print("run: python " + sys.argv[0] + " -source source_ip -dest dest_ip " + 
+	"-source_port sport -dest_port dport -server -file filename \n")
+	print("source_ip  	- Host where you want the data to originate from.");
+	print("		In SERVER mode this is the host data will");
+	print("		be coming FROM.");
+	print("dest_ip		- Host to send data to")
+	print("sport  		- IP source port you want data to appear from.");
+	print("		(randomly set by default)");
+	print("dport 		- IP source port you want data to go to. In");
+	print("		SERVER mode this is the port data will be coming");
+	print("		inbound on. Port 80 by default.");
+	print("filename 	- Name of the file to encode and transfer.");
+	print("-server  	- Passive mode to allow receiving of data.");
+	print()
+	print("Example: Server - receiver")
+	print("python " + sys.argv[0] + " -source 192.168.0.1 -dest 192.168.0.2 -dest_port 80 -server -file receive.txt")
+	print()
+	print("Example: Client - sender")
+	print("python " + sys.argv[0] + " -source 192.168.0.1 -dest 192.168.0.2 -source_port 8000 -dest_port 80 -file send.txt")
+
+	exit(1)
+
+######################################################
+#	Execute main function with parameters
+#
+######################################################
 if __name__ == '__main__':
 	main(sys.argv[1:])	# get everything after the script name
